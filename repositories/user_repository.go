@@ -1,0 +1,73 @@
+package repositories
+
+import (
+	"fmt"
+	"go_crud_2026/database"
+	"go_crud_2026/models"
+
+	"gorm.io/gorm"
+)
+
+type UserRepository struct {
+	db *gorm.DB
+}
+
+func NewUserRepository() *UserRepository {
+	err := database.DB.AutoMigrate(&models.User{})
+	if err != nil {
+		return nil
+	}
+	return &UserRepository{db: database.DB}
+}
+
+func (r *UserRepository) GetAllUsers() []models.User {
+	var users []models.User
+	r.db.Find(&users)
+	return users
+}
+
+func (r *UserRepository) GetUserById(id int) (*models.User, bool) {
+	var user models.User
+	result := r.db.First(&user, id)
+	if result.Error != nil {
+		return nil, false
+	}
+	return &user, true
+}
+
+func (r *UserRepository) Create(user models.User) models.User {
+	r.db.Create(&user)
+	return user
+}
+
+// Update user
+func (r *UserRepository) Update(id int, updated models.User) (*models.User, bool) {
+	var user models.User
+	result := r.db.First(&user, id)
+	if result.Error != nil {
+		return nil, false
+	}
+
+	user.Name = updated.Name
+	user.Email = updated.Email
+	r.db.Save(&user)
+	return &user, true
+}
+
+// Delete user
+func (r *UserRepository) Delete(id int) bool {
+	if err := r.db.Delete(&models.User{}, id).Error; err != nil {
+		return false
+	}
+	return true
+}
+
+func (r *UserRepository) GetByEmail(email string) (*models.User, bool) {
+	var user models.User
+	fmt.Println("email", email)
+	result := r.db.First(&user, "email = ?", email)
+	if result.Error != nil {
+		return nil, false
+	}
+	return &user, true
+}
