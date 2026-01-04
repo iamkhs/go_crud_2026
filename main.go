@@ -22,12 +22,13 @@ func main() {
 
 	// Inject service into handlers
 	handlers.SetUserService(userService)
-	handlers.SetAuthService(userService) // <-- ADD THIS
+	handlers.SetAuthService(userService)
 
 	// Register routes
 	routes.RegisterUserRoutes(r)
 
 	r.POST("/login", handlers.Login)
+	r.POST("/register", handlers.Create)
 
 	_ = r.Run(":8080")
 }

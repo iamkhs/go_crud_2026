@@ -1,10 +1,12 @@
 package services
 
 import (
-	"fmt"
 	"go_crud_2026/auth"
+	"go_crud_2026/dto/response"
 	"go_crud_2026/models"
 	"go_crud_2026/repositories"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
@@ -15,8 +17,19 @@ func NewUserService(repo *repositories.UserRepository) *UserService {
 	return &UserService{repo: repo}
 }
 
-func (s *UserService) GetAllUsers() []models.User {
-	return s.repo.GetAllUsers()
+func (s *UserService) GetAllUsers() []response.UserResponse {
+	users := s.repo.GetAllUsers()
+	var userResponseList []response.UserResponse
+	for _, user := range users {
+		userResponse := response.UserResponse{
+			ID:    user.ID,
+			Name:  user.Name,
+			Email: user.Email,
+		}
+		userResponseList = append(userResponseList, userResponse)
+	}
+
+	return userResponseList
 }
 
 func (s *UserService) GetById(id int) (*models.User, bool) {
@@ -37,14 +50,12 @@ func (s *UserService) DeleteUser(id int) bool {
 
 func (s *UserService) Login(email, password string) (string, bool) {
 	user, found := s.repo.GetByEmail(email)
-	fmt.Println(user)
 	if !found {
 		return "", false
 	}
 
-	// For demo: no password hashing yet
-	// In real app, compare hashed password
-	if password != "password" { // Demo password
+	// Compare provided password with stored hashed password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		return "", false
 	}
 

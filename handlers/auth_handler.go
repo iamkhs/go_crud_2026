@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"go_crud_2026/dto/request"
+	"go_crud_2026/models"
 	"go_crud_2026/services"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var authService *services.UserService
@@ -13,13 +16,8 @@ func SetAuthService(service *services.UserService) {
 	authService = service
 }
 
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
 func Login(c *gin.Context) {
-	var req LoginRequest
+	var req request.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -32,4 +30,27 @@ func Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
+}
+
+func Create(c *gin.Context) {
+	var req request.UserCreate
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+		return
+	}
+
+	user := models.User{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: string(hashed),
+	}
+
+	authService.CreateUser(user)
+	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully"})
 }
