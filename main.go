@@ -18,14 +18,20 @@ func main() {
 
 	// Setup repository & service
 	userRepo := repositories.NewUserRepository()
-	userService := services.NewUserService(userRepo)
+	emailService := services.NewEmailService()
+	userService := services.NewUserService(userRepo, emailService)
+	companyRepo := repositories.NewCompanyRepository()
+	companyService := services.NewCompanyService(companyRepo)
 
 	// Inject service into handlers
 	handlers.SetUserService(userService)
 	handlers.SetAuthService(userService)
+	handlers.SetCompanyService(companyService)
 
 	// Register routes
-	routes.RegisterUserRoutes(r)
+	v1 := r.Group("/api/v1")
+	routes.RegisterUserRoutes(v1)
+	routes.RegisterCompanyRoutes(v1)
 
 	r.POST("/login", handlers.Login)
 	r.POST("/register", handlers.Create)

@@ -15,7 +15,8 @@ type UserRepository struct {
 func NewUserRepository() *UserRepository {
 	err := database.DB.AutoMigrate(&models.User{})
 	if err != nil {
-		return nil
+		fmt.Println("Error migrating User model:", err)
+		panic("Failed to migrate User model")
 	}
 	return &UserRepository{db: database.DB}
 }
@@ -35,9 +36,12 @@ func (r *UserRepository) GetUserById(id int) (*models.User, bool) {
 	return &user, true
 }
 
-func (r *UserRepository) Create(user models.User) models.User {
-	r.db.Create(&user)
-	return user
+func (r *UserRepository) Create(user models.User) (models.User, error) {
+	result := r.db.Create(&user)
+	if result.Error != nil {
+		return models.User{}, result.Error
+	}
+	return user, nil
 }
 
 // Update user
@@ -48,7 +52,7 @@ func (r *UserRepository) Update(id int, updated models.User) (*models.User, bool
 		return nil, false
 	}
 
-	user.Name = updated.Name
+	user.FullName = updated.FullName
 	user.Email = updated.Email
 	r.db.Save(&user)
 	return &user, true

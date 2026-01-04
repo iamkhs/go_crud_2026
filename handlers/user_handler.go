@@ -48,9 +48,15 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	userService.CreateUser(newUser)
+	createdUser, err := userService.CreateUser(newUser)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to create user: " + err.Error(),
+		})
+		return
+	}
 
-	c.JSON(http.StatusCreated, newUser)
+	c.JSON(http.StatusCreated, createdUser)
 }
 
 func UpdateUser(c *gin.Context) {

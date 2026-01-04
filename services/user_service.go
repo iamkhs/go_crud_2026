@@ -1,6 +1,10 @@
 package services
 
 import (
+	"crypto/rand"
+	"fmt"
+	"math/big"
+
 	"go_crud_2026/auth"
 	"go_crud_2026/dto/response"
 	"go_crud_2026/models"
@@ -10,11 +14,12 @@ import (
 )
 
 type UserService struct {
-	repo *repositories.UserRepository
+	repo         *repositories.UserRepository
+	emailService *EmailService
 }
 
-func NewUserService(repo *repositories.UserRepository) *UserService {
-	return &UserService{repo: repo}
+func NewUserService(repo *repositories.UserRepository, emailService *EmailService) *UserService {
+	return &UserService{repo: repo, emailService: emailService}
 }
 
 func (s *UserService) GetAllUsers() []response.UserResponse {
@@ -23,7 +28,7 @@ func (s *UserService) GetAllUsers() []response.UserResponse {
 	for _, user := range users {
 		userResponse := response.UserResponse{
 			ID:    user.ID,
-			Name:  user.Name,
+			Name:  user.FullName,
 			Email: user.Email,
 		}
 		userResponseList = append(userResponseList, userResponse)
@@ -36,8 +41,37 @@ func (s *UserService) GetById(id int) (*models.User, bool) {
 	return s.repo.GetUserById(id)
 }
 
-func (s *UserService) CreateUser(user models.User) models.User {
-	return s.repo.Create(user)
+func (s *UserService) CreateUser(user models.User) (models.User, error) {
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err == nil {
+		user.Password = string(hashedPassword)
+	}
+
+	// Generate OTP
+	otp := s.generateOTP()
+	user.Otp = otp
+	user.Enable = false
+
+	// Save to DB
+	createdUser, err := s.repo.Create(user)
+	if err != nil {
+		return models.User{}, err
+	}
+	
+	// Send OTP Email
+	go s.emailService.SendOtpEmail(createdUser.Email, otp)
+
+	return createdUser, nil
+}
+
+func (s *UserService) generateOTP() string {
+	n, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		fmt.Println("Error generating OTP:", err)
+		return "123456" // Fallback
+	}
+	return fmt.Sprintf("%06d", n.Int64())
 }
 
 func (s *UserService) UpdateUser(id int, user models.User) (*models.User, bool) {

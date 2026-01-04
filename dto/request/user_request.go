@@ -1,7 +1,7 @@
 package request
 
 type UserCreate struct {
-	Name     string `json:"name"`
+	FullName string `json:"full_name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }

@@ -46,11 +46,16 @@ func Create(c *gin.Context) {
 	}
 
 	user := models.User{
-		Name:     req.Name,
+		FullName: req.FullName,
 		Email:    req.Email,
 		Password: string(hashed),
 	}
 
-	authService.CreateUser(user)
-	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully"})
+	_, err = authService.CreateUser(user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully, An Otp has been sent to your email"})
 }

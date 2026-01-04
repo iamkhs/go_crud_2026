@@ -7,13 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterUserRoutes(r *gin.Engine) {
-	userRoutes := r.Group("/users")
-	userRoutes.Use(auth.JWTMiddleware()) // protect all the /users route
+func RegisterUserRoutes(rg *gin.RouterGroup) {
+	userRoutes := rg.Group("/users")
+
+	userRoutes.Use(auth.JWTMiddleware())
 	{
 		userRoutes.GET("", handlers.GetUsers)
 		userRoutes.GET("/:id", handlers.GetUserById)
-		userRoutes.POST("", handlers.CreateUser)
 		userRoutes.PUT("/:id", handlers.UpdateUser)
 		userRoutes.DELETE("/:id", handlers.DeleteUser)
 	}
