@@ -3,6 +3,7 @@ package handlers
 import (
 	"go_crud_2026/models"
 	"go_crud_2026/services"
+	"go_crud_2026/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,13 +19,11 @@ func CreateCompany(c *gin.Context) {
 	var company models.Company
 	err := c.ShouldBindJSON(&company)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
+		utils.SendErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	userId, _ := c.Get("userID")
 	company.UserId = userId.(uint)
 	service.CreateCompany(company)
-	c.JSON(http.StatusCreated, company)
+	utils.SendSuccessResponse(c, http.StatusCreated, "Company created successfully", company)
 }

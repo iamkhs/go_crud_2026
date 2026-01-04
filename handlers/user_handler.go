@@ -1,11 +1,11 @@
 package handlers
 
 import (
+	"go_crud_2026/models"
 	"go_crud_2026/services"
+	"go_crud_2026/utils"
 	"net/http"
 	"strconv"
-
-	"go_crud_2026/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,7 +17,8 @@ func SetUserService(service *services.UserService) {
 }
 
 func GetUsers(c *gin.Context) {
-	c.JSON(http.StatusOK, userService.GetAllUsers())
+	users := userService.GetAllUsers()
+	utils.SendSuccessResponse(c, http.StatusOK, "Users retrieved successfully", users)
 }
 
 func GetUserById(c *gin.Context) {
@@ -25,38 +26,39 @@ func GetUserById(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		utils.SendErrorResponse(c, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	user, found := userService.GetById(id)
 
 	if !found {
-		c.JSON(http.StatusNotFound, gin.H{"message": "user not found"})
+		utils.SendErrorResponse(c, http.StatusNotFound, "User not found")
+		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	utils.SendSuccessResponse(c, http.StatusOK, "User retrieved successfully", user)
 }
 
 func CreateUser(c *gin.Context) {
 	var newUser models.User
 
 	if err := c.ShouldBindJSON(&newUser); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
+		utils.SendErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	createdUser, err := userService.CreateUser(newUser)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to create user: " + err.Error(),
-		})
+		if err.Error() == "email already exists" {
+			utils.SendErrorResponse(c, http.StatusConflict, err.Error())
+			return
+		}
+		utils.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create user: "+err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, createdUser)
+	utils.SendSuccessResponse(c, http.StatusCreated, "User created successfully", createdUser)
 }
 
 func UpdateUser(c *gin.Context) {
@@ -66,16 +68,17 @@ func UpdateUser(c *gin.Context) {
 
 	var updatedUser models.User
 	if err := c.ShouldBindJSON(&updatedUser); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.SendErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	user, found := userService.UpdateUser(id, updatedUser)
-	if !found {
-		c.JSON(http.StatusNotFound, gin.H{"message": "user not found"})
+	user, err := userService.UpdateUser(id, updatedUser)
+	if err != nil {
+		utils.SendErrorResponse(c, http.StatusInternalServerError, "User not found or update failed")
+		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	utils.SendSuccessResponse(c, http.StatusOK, "User updated successfully", user)
 }
 
 func DeleteUser(c *gin.Context) {
@@ -84,8 +87,9 @@ func DeleteUser(c *gin.Context) {
 
 	isDelete := userService.DeleteUser(id)
 	if !isDelete {
-		c.JSON(http.StatusNotFound, gin.H{"message": "user not found"})
+		utils.SendErrorResponse(c, http.StatusNotFound, "User not found")
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "user deleted successfully"})
+	utils.SendSuccessResponse(c, http.StatusOK, "User deleted successfully", nil)
 }

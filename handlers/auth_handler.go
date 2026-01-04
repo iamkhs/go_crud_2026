@@ -4,10 +4,10 @@ import (
 	"go_crud_2026/dto/request"
 	"go_crud_2026/models"
 	"go_crud_2026/services"
+	"go_crud_2026/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var authService *services.UserService
@@ -19,43 +19,56 @@ func SetAuthService(service *services.UserService) {
 func Login(c *gin.Context) {
 	var req request.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		utils.SendErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	token, ok := authService.Login(req.Email, req.Password)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		utils.SendErrorResponse(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	utils.SendSuccessResponse(c, http.StatusOK, "Login successful", gin.H{"token": token})
 }
 
 func Create(c *gin.Context) {
 	var req request.UserCreate
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+		utils.SendErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	user := models.User{
 		FullName: req.FullName,
 		Email:    req.Email,
-		Password: string(hashed),
 	}
 
-	_, err = authService.CreateUser(user)
+	_, err := authService.CreateUser(user)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user: " + err.Error()})
+		if err.Error() == "email already exists" {
+			utils.SendErrorResponse(c, http.StatusConflict, err.Error())
+			return
+		}
+		utils.SendErrorResponse(c, http.StatusInternalServerError, "Failed to register user: "+err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully, An Otp has been sent to your email"})
+	utils.SendSuccessResponse(c, http.StatusCreated, "User created successfully, An Otp has been sent to your email", nil)
+}
+
+func VerifyOtp(c *gin.Context) {
+	var req request.VerifyOtpRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.SendErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	err := authService.VerifyAndCompleteRegistration(req.Email, req.Otp, req.Password, req.CompanyName, req.EmployeeSize)
+	if err != nil {
+		utils.SendErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	utils.SendSuccessResponse(c, http.StatusOK, "Account verified and registration completed successfully", nil)
 }

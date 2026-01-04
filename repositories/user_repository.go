@@ -1,9 +1,11 @@
 package repositories
 
 import (
+	"errors"
 	"fmt"
 	"go_crud_2026/database"
 	"go_crud_2026/models"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -39,23 +41,21 @@ func (r *UserRepository) GetUserById(id int) (*models.User, bool) {
 func (r *UserRepository) Create(user models.User) (models.User, error) {
 	result := r.db.Create(&user)
 	if result.Error != nil {
+		if strings.Contains(result.Error.Error(), "duplicate key value") {
+			return models.User{}, errors.New("email already exists")
+		}
 		return models.User{}, result.Error
 	}
 	return user, nil
 }
 
 // Update user
-func (r *UserRepository) Update(id int, updated models.User) (*models.User, bool) {
-	var user models.User
-	result := r.db.First(&user, id)
-	if result.Error != nil {
-		return nil, false
+func (r *UserRepository) Update(id int, updated models.User) (*models.User, error) {
+	updated.ID = uint(id)
+	if err := r.db.Save(&updated).Error; err != nil {
+		return nil, err
 	}
-
-	user.FullName = updated.FullName
-	user.Email = updated.Email
-	r.db.Save(&user)
-	return &user, true
+	return &updated, nil
 }
 
 // Delete user

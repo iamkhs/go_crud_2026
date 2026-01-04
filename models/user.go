@@ -7,7 +7,7 @@ type User struct {
 
 	FullName string `json:"full_name" binding:"required"`
 	Email    string `json:"email" binding:"required" gorm:"unique"`
-	Password string `json:"password" binding:"required"`
+	Password string `json:"password"`
 	Enable   bool   `json:"enable"`
 	Otp      string `json:"otp"`
 

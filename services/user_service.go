@@ -58,7 +58,7 @@ func (s *UserService) CreateUser(user models.User) (models.User, error) {
 	if err != nil {
 		return models.User{}, err
 	}
-	
+
 	// Send OTP Email
 	go s.emailService.SendOtpEmail(createdUser.Email, otp)
 
@@ -74,8 +74,19 @@ func (s *UserService) generateOTP() string {
 	return fmt.Sprintf("%06d", n.Int64())
 }
 
-func (s *UserService) UpdateUser(id int, user models.User) (*models.User, bool) {
-	return s.repo.Update(id, user)
+func (s *UserService) UpdateUser(id int, user models.User) (*models.User, error) {
+	// Fetch existing user to avoid wiping out fields (like Password)
+	existing, found := s.repo.GetUserById(id)
+	if !found {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	// Update allow-listed fields
+	existing.FullName = user.FullName
+	existing.Email = user.Email
+	// Note: If you want to allow updating other fields via this endpoint, add them here.
+
+	return s.repo.Update(id, *existing)
 }
 
 func (s *UserService) DeleteUser(id int) bool {
@@ -99,4 +110,35 @@ func (s *UserService) Login(email, password string) (string, bool) {
 	}
 
 	return token, true
+}
+
+func (s *UserService) VerifyAndCompleteRegistration(email, otp, password, companyName string, employeeSize int) error {
+
+	user, found := s.repo.GetByEmail(email)
+	if !found {
+		return fmt.Errorf("user not found")
+	}
+
+	if user.Otp != otp {
+		return fmt.Errorf("invalid OTP")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password")
+	}
+	user.Password = string(hashedPassword)
+
+	company := models.Company{
+		CompanyName:  companyName,
+		EmployeeSize: employeeSize,
+		UserId:       user.ID,
+	}
+	user.Company = company
+
+	user.Enable = true
+	user.Otp = ""
+
+	_, err = s.repo.Update(int(user.ID), *user)
+	return err
 }

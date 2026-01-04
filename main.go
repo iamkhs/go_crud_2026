@@ -33,8 +33,9 @@ func main() {
 	routes.RegisterUserRoutes(v1)
 	routes.RegisterCompanyRoutes(v1)
 
-	r.POST("/login", handlers.Login)
-	r.POST("/register", handlers.Create)
+	r.POST("/api/v1/auth/login", handlers.Login)
+	r.POST("/api/v1/auth/register", handlers.Create)
+	r.POST("/api/v1/auth/verify-otp", handlers.VerifyOtp)
 
 	_ = r.Run(":8080")
 }

@@ -36,7 +36,13 @@ func (s *EmailService) SendOtpEmail(email string, otp string) {
 		return
 	}
 
-	req, err := http.NewRequest("POST", "https://send.api.mailtrap.io/api/send", bytes.NewReader(bodyBytes))
+	// Get URL from env or default to production
+	mailtrapURL := os.Getenv("MAILTRAP_URL")
+	if mailtrapURL == "" {
+		mailtrapURL = "https://send.api.mailtrap.io/api/send"
+	}
+
+	req, err := http.NewRequest("POST", mailtrapURL, bytes.NewReader(bodyBytes))
 	if err != nil {
 		fmt.Println(err)
 		return
