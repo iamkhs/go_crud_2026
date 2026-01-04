@@ -22,16 +22,20 @@ func main() {
 	userService := services.NewUserService(userRepo, emailService)
 	companyRepo := repositories.NewCompanyRepository()
 	companyService := services.NewCompanyService(companyRepo)
+	roleRepo := repositories.NewRoleRepository()
+	roleService := services.NewRoleService(roleRepo)
 
 	// Inject service into handlers
 	handlers.SetUserService(userService)
 	handlers.SetAuthService(userService)
 	handlers.SetCompanyService(companyService)
+	handlers.SetUpRoleService(roleService)
 
 	// Register routes
 	v1 := r.Group("/api/v1")
 	routes.RegisterUserRoutes(v1)
 	routes.RegisterCompanyRoutes(v1)
+	routes.SetUpRoleRoutes(v1)
 
 	r.POST("/api/v1/auth/login", handlers.Login)
 	r.POST("/api/v1/auth/register", handlers.Create)

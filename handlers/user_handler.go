@@ -40,27 +40,6 @@ func GetUserById(c *gin.Context) {
 	utils.SendSuccessResponse(c, http.StatusOK, "User retrieved successfully", user)
 }
 
-func CreateUser(c *gin.Context) {
-	var newUser models.User
-
-	if err := c.ShouldBindJSON(&newUser); err != nil {
-		utils.SendErrorResponse(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	createdUser, err := userService.CreateUser(newUser)
-	if err != nil {
-		if err.Error() == "email already exists" {
-			utils.SendErrorResponse(c, http.StatusConflict, err.Error())
-			return
-		}
-		utils.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create user: "+err.Error())
-		return
-	}
-
-	utils.SendSuccessResponse(c, http.StatusCreated, "User created successfully", createdUser)
-}
-
 func UpdateUser(c *gin.Context) {
 	idParam := c.Param("id")
 
